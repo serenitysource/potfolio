@@ -1,1 +1,312 @@
+# End-to-End Provenance Flow
 
+## 1. System goal (what must be proven)
+
+This system must provide three things at once:
+
+- **Real-time UX**
+  - Users can transfer ERGON/CARBON freely between wallets and bridge quickly.
+- **Strong provenance**
+  - An auditor can later verify that CARBON supply came from real device readings, with an integrity chain back to the device’s metering database.
+- **Minimal on-chain load**
+  - On-chain storage is limited to anchors (cryptographic commitments) plus enough events to reconstruct proof paths, while detailed per-minute data remains off-chain (MQTT/DB).
+
+**Key idea:** Keep minute-level readings in the database, but anchor each reading on-chain via a deterministic `canonical_reading_hash` and mint/burn events that reference it.
+
+## 2. Components and responsibilities
+
+### A. HEPEK device runtime (`contract.py`)
+
+- Reads meter deltas (minute granularity).
+- Builds a canonical reading envelope.
+- Computes a deterministic `canonical_reading_hash` (`bytes32`, `keccak256`).
+- Calls `ErgonEnergy.SC_Power_OUT_Alloc(produced, exported, canonical_reading_hash)` on-chain.
+- Persists the same hash and tx metadata in DB/MQTT for later audit reconstruction.
+
+### B. Energy accounting contract (`ErgonEnergy.sol`)
+
+- Receives readings and enforces anti-replay (e.g., `usedReading[readingHash]`).
+- Emits audit events that include `canonical_reading_hash` and derived allocations.
+- Calls token contracts to mint/burn:
+  - `Ergon.increaseSupply(...)`
+  - `Carbon.increaseSupply(...)`
+  - Burn calls for imports or settlement (depending on the accounting rules).
+
+### C. ERC-20 tokens (`Carbon.sol`, `Ergon.sol`)
+
+- Hold balances and support normal ERC-20 transfers.
+- `increaseSupply(to, amount)` is the core mint entrypoint (in `Carbon.sol` it is typically restricted to `onlyEngine`).
+- Burning is also restricted to `onlyEngine` (e.g., `burnFrom(...)`).
+
+This separation keeps token contracts simple while ensuring that all “meaning” (mint/burn justification) is derived from `ErgonEnergy` events.
+
+## 3. Canonical `canonical_reading_hash` (the audit anchor)
+
+### 3.1 What the hash is (and why it matters)
+
+`canonical_reading_hash` is the cryptographic join key across:
+
+- The raw reading stored off-chain (DB/MQTT).
+- The on-chain transaction that submitted the reading.
+- The on-chain audit/mint events that describe how supply was derived.
+
+It exists to support:
+
+- Anti-replay (the engine can reject a duplicate hash).
+- A cryptographic link between telemetry records and EVM state transitions.
+- Deterministic audit reconstruction (recompute the hash from DB data and match it to chain events).
+
+Note: Solidity code may refer to this value as `readingHash` or `reading_hash` as a parameter name; this document consistently uses `canonical_reading_hash` for clarity.
+
+### 3.2 Deterministic hashing: prefer the “strong” version
+
+Two hashing approaches typically exist:
+
+- `make_reading_hash(...)` (minimal payload)
+- `make_deterministic_reading_hash(...)` (typed + normalized + schema + direction + factor)
+
+The deterministic version is safer because it enforces:
+
+- Device ID normalization.
+- Timestamp as an integer slot (no format ambiguity).
+- Produced/exported values as integers (avoids float drift).
+- A schema/version marker.
+- Canonical JSON encoding with stable separators.
+
+This is the property auditors care about: the digest can be reproduced exactly from the same source data.
+
+### 3.3 Should `canonical_reading_hash` be included in MQTT payload?
+
+Yes. The intended pattern is:
+
+- **On-chain:** store/emit `canonical_reading_hash`.
+- **Off-chain:** store:
+  - `canonical_reading_hash` (same value),
+  - the original meter fields,
+  - transaction metadata (`tx_hash`, and ideally block/log position).
+
+Recommendation (audit-friendly DB fields per reading):
+
+1. `canonical_reading_hash` (bytes32 hex)
+2. `device_id` (normalized lowercase address)
+3. `timestamp_slot` (epoch-minute `int`)
+4. `produced_power`, `export_power`, `factor`, `direction`
+5. `chain_id`
+6. `tx_hash`
+7. `block_number`
+8. `log_index` (index of the engine audit event log)
+9. `ergon_energy_contract`
+10. Optional: `prev_hash` (see Section 9)
+
+This makes provenance reconstruction deterministic and fast.
+
+## 4. End-to-end flow (minute reading → tokens minted)
+
+### 4.1 High-level block diagram
+
+```text
+┌──────────────┐      MQTT/DB write (payload + canonical_reading_hash + tx_meta)
+│   HEPEK      │────────────────────────────────────────────────────────────┐
+│  device      │                                                            │
+│ contract.py  │                                                            │
+└──────┬───────┘                                                            │
+       │ SC_Power_OUT_Alloc(produced, exported, canonical_reading_hash)     │
+       ▼                                                                    │
+┌───────────────────┐         mints/burns              ┌───────────────┐    │
+│  ErgonEnergy.sol  │───────────────────────────────▶ │  Carbon.sol    │    │
+│  (engine + audit) │───────────────────────────────▶ │  Ergon.sol     │    │
+└───────────────────┘                                  └───────────────┘    │
+       │                                                                    │
+       └───────── emits audit events (canonical_reading_hash anchored) ─────┘
+```
+
+### 4.2 Detailed step-by-step sequence
+
+1. **Device creates envelope + hash**
+   - Build a canonical envelope with `device_id`, `timestamp`, `direction`, `produced/exported`, and `factor`.
+   - Compute `canonical_reading_hash = make_deterministic_reading_hash(envelope)`.
+2. **Device submits reading to chain**
+   - Invoke `SC_Power_OUT_Alloc(produced_power, export_power, canonical_reading_hash)` (signed by the device key).
+3. **Device stores DB/MQTT record**
+   - After receipt, persist `canonical_reading_hash` and the originating `tx_hash` with the telemetry payload.
+4. **Engine validates anti-replay**
+   - `ErgonEnergy` checks its anti-replay mapping and rejects duplicates.
+5. **Engine emits audit events**
+   - `ErgonEnergy` emits events that include:
+     - the anchor (`canonical_reading_hash`)
+     - the measured inputs (produced/exported)
+     - derived allocations / rule flags
+     - minted token quantities
+6. **Engine mints tokens**
+   - `ErgonEnergy` calls token contracts:
+     - `Ergon.increaseSupply(user_or_device, ergonAmount)`
+     - `Carbon.increaseSupply(user_or_device, carbonAmount)`
+
+Interpretation:
+
+> “This amount of CARBON exists because this specific `canonical_reading_hash` was accepted and allocated by the engine.”
+
+## 5. What to emit on-chain (and why)
+
+Auditors need evidence that:
+
+- readings existed,
+- readings were not replayed,
+- minting was derived from readings,
+- later burns (for certificates) correspond to real minted supply.
+
+### 5.1 Minimum event set (recommended)
+
+For each accepted reading, emit one canonical engine audit event (e.g., `ReadingAccepted`):
+
+- `device`
+- `timestamp_slot`
+- `canonical_reading_hash`
+- `produced`, `exported`, `factor`
+- `ergon_minted`, `carbon_minted`
+- Optional: `reason_code` / `rule_flags`
+
+Why:
+
+- Enables reconstruction of supply provenance per reading without storing raw telemetry on-chain.
+- ERC-20 minting already produces standard `Transfer(0x0 → to, amount)` logs, but the engine event is what ties mint amounts to `canonical_reading_hash`.
+
+### 5.2 Why not “minute lots” on-chain
+
+Bridge slowdowns are a common failure mode when too much fine-grained provenance is pushed into the bridged representation.
+
+An auditor typically does not require “minute provenance on the bridged chain”. Instead, they require:
+
+- Proof that the source chain contains immutable anchors.
+- A provable mapping from certificate retirement (burn) → subset of those anchors.
+
+So:
+
+- Keep minute anchors in the source chain + DB.
+- Optionally aggregate into period commitments (daily/monthly) for fast proofs.
+- Bridge only ERC-20 balances for UX.
+
+## 6. Provenance model that stays fast for users
+
+The design targets:
+
+- Fast transfers/bridging in real time.
+- Minimal on-chain data sufficient for audit.
+- The ability to prove device contributions at certificate mint/retirement time (e.g., “20% device A, rest devices B..F”).
+
+### 6.1 Correct mental model: balances move, provenance stays anchored
+
+ERC-20 transfers do not need to “move provenance lots”. Provenance is not “which user owns which reading”; provenance is “what evidence created this supply”.
+
+Model:
+
+- Source chain stores immutable reading anchors/events.
+- CARBON token supply exists because those anchors existed.
+- Users can trade CARBON freely.
+- When minting an NFT certificate (burning CARBON), generate an audit proof showing the burned amount is covered by a set of anchors (or period commitments).
+
+## 7. Period commitments (optional but powerful)
+
+This is the “middle layer” between minute anchors and certificate proofs.
+
+### 7.1 What `commitDevicePeriod(device, periodId, periodSum, periodRoot)` means
+
+For a device and a period (day/week/month), compute:
+
+- `periodSum`: total carbon minted for that device in that period (or total kWh / total carbon delta)
+- `periodRoot`: a Merkle root over all reading anchors, typically leaves such as `(canonical_reading_hash, carbon_amount)`
+
+Store these commitments on-chain (mapping + event), typically in mappings like `devicePeriodCommit[device][periodId] = {sum, root}` and/or emitted as events for indexers.
+
+### 7.2 What `commitPeriodGlobal(periodId, globalRoot)` means
+
+For a given period, compute a Merkle root over all device commitments for that period (e.g., leaves are `(device, sum, root)`). Then store:
+
+- `globalCommit[periodId] = globalRoot`
+
+Now an auditor can verify:
+
+- The certificate burn was covered by a set of device periods.
+- Each device period is covered by a set of per-reading anchors (if needed).
+
+### 7.3 Should this be executed automatically when the period elapses?
+
+EVM contracts do not self-trigger when time passes.
+
+So “automatic” must be off-chain (cron job / relayer / keeper bot). A typical pattern:
+
+1. Relayer wakes every N minutes/hours.
+2. Detects a period boundary.
+3. Computes commits (from DB/indexer).
+4. Calls `commitDevicePeriod` and `commitPeriodGlobal`.
+
+## 8. Bridging: keep it agnostic to lots/periods (best for UX)
+
+### 8.1 Do we need to sync period commits to destination chain periodically?
+
+Not strictly. Two common options:
+
+- **Option A — No periodic sync (simplest UX)**
+  - Bridge only moves ERC-20 balances.
+  - Destination chain treats the source chain as the provenance authority.
+  - When an NFT certificate is minted (destination or source), fetch proofs from the source (or from DB/indexer) and embed proof/roots into NFT metadata / certificate events.
+- **Option B — Periodic sync (self-contained destination)**
+  - Relayer periodically sends `(periodId, globalRoot)` (and optionally device commits) to destination.
+  - Destination contract stores these roots.
+  - NFT mint on destination can verify proofs against stored roots without querying the source.
+
+If the priority is “fast and frictionless”, Option A is usually sufficient unless a regulator explicitly requires destination-chain self-verification.
+
+### 8.2 What does destination need during `bridgeMint`?
+
+If the destination token represents bridged CARBON balance, it does not need device lists at mint time.
+
+It typically only needs:
+
+- `messageId`
+- `recipient`
+- `amount`
+- Optional: the proof blob for bridge authentication (ZK or gateway proof)
+
+Provenance proofs can be handled later at certificate mint / retirement time.
+
+## 9. Stronger provenance with hash chaining (optional upgrade)
+
+To detect missing readings (even off-chain), add:
+
+- `seq` (monotonic counter per device)
+- `prev_hash` (hash of previous reading)
+
+Then each reading anchor commits to a chain:
+
+```text
+canonical_reading_hash_t = keccak(device, ts, produced, exported, factor, seq, prev_hash_{t-1})
+```
+
+This makes gaps or tampering detectable even if a record is deleted from the DB.
+
+## 10. Summary
+
+Each meter interval is anchored using a deterministic `canonical_reading_hash` computed from a canonicalized payload (device identifier, epoch time slot, measured production/export values, and allocation factor). The device submits the `canonical_reading_hash` to the on-chain energy engine (`ErgonEnergy`) together with the measured deltas. The engine enforces anti-replay and emits immutable audit events binding each accepted reading to the derived allocations and token mint amounts. The same `canonical_reading_hash` is persisted in MQTT/DB alongside the transaction metadata, enabling deterministic cross-verification between off-chain telemetry and on-chain state transitions. This keeps detailed per-minute telemetry off-chain for scale, while keeping on-chain evidence sufficient for audit.
+
+## 11. Quick answers
+
+### Is `canonical_reading_hash` enough?
+
+Yes, if it is:
+
+- Deterministic (typed + normalized).
+- Stored in DB alongside the raw reading and tx metadata.
+- Referenced by an on-chain audit event that ties it to mint/burn outcomes.
+
+## 12. Glossary
+
+- **`canonical_reading_hash`**: A deterministic `bytes32` anchor (typically `keccak256`) computed from a canonical reading envelope. Used as the cross-system join key for telemetry records, EVM transactions, and engine audit events.
+- **Reading envelope**: The canonical set of fields hashed to produce `canonical_reading_hash` (e.g., normalized `device_id`, `timestamp_slot`, `produced/exported`, `factor`, and a schema/version marker).
+- **`timestamp_slot`**: The reading time represented as an integer slot (commonly “epoch minute”) to avoid ambiguity.
+- **Engine audit event**: A contract event emitted by `ErgonEnergy` that ties an accepted reading anchor to derived allocations and mint/burn outcomes.
+- **Anti-replay**: A contract rule that rejects a previously-seen reading anchor (e.g., using a `usedReading` mapping).
+- **`periodId`**: A period identifier (day/week/month) used for aggregating per-minute anchors into period commitments.
+- **`periodSum`**: The aggregate amount for a device over a period (e.g., total CARBON minted).
+- **`periodRoot`**: A Merkle root committing to all per-reading anchors in a period (often leaves like `(canonical_reading_hash, carbon_amount)`).
+- **`globalRoot`**: A Merkle root committing to all device period commitments for a period (often leaves like `(device, sum, root)`).
