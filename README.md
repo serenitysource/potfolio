@@ -81,7 +81,7 @@ A comprehensive decentralized marketplace platform enabling transparent carbon c
 
 A comprehensive audit-ready provenance system connecting IoT energy devices to carbon credit NFTs through deterministic hashing, event-centric architecture, and cross-chain bridging.
 
-- <a>📖 Full Documentation</a> - Complete provenance architecture and flow
+- [📖 Full Documentation](./Provenance/README.md) - Complete provenance architecture and flow
 
 ---
 
