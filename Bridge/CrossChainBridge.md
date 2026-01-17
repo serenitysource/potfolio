@@ -458,31 +458,31 @@ Layer 5: Controlled Minting
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  ┌──────────────┐                                          │
-│  │   Relayer    │ ◄── SINGLE POINT OF TRUST               │ 
+│  │   Relayer    │ ◄── SINGLE POINT OF TRUST                │ 
 │  └──────┬───────┘                                          │
 │         │                                                  │
-│         ├─► Must be online and available                  │
-│         ├─► Must correctly relay events                   │
-│         ├─► Must provide valid proofs                     │
-│         └─► Controls which transactions are processed     │
+│         ├─► Must be online and available                   │
+│         ├─► Must correctly relay events                    │
+│         ├─► Must provide valid proofs                      │
+│         └─► Controls which transactions are processed      │
 │                                                            │
 │  HOWEVER:                                                  │
-│  ┌──────────────────────────────────────────────┐         │
-│  │ On-chain verification CANNOT be bypassed:    │         │
-│  │ • ZK proof must be valid                     │         │
-│  │ • Cryptographic verification is enforced     │         │
-│  │ • Relayer cannot fake proofs                 │         │
-│  │ • Relayer cannot mint arbitrary amounts      │         │
-│  └──────────────────────────────────────────────┘         │
+│  ┌──────────────────────────────────────────────┐          │
+│  │ On-chain verification CANNOT be bypassed:    │          │
+│  │ • ZK proof must be valid                     │          │
+│  │ • Cryptographic verification is enforced     │          │
+│  │ • Relayer cannot fake proofs                 │          │
+│  │ • Relayer cannot mint arbitrary amounts      │          │
+│  └──────────────────────────────────────────────┘          │
 │                                                            │
 │  RISK: Relayer can:                                        │
-│  • Censor transactions (not relay them)                   │
-│  • Go offline (halt bridge)                               │
+│  • Censor transactions (not relay them)                    │
+│  • Go offline (halt bridge)                                │
 │                                                            │
 │  RISK: Relayer CANNOT:                                     │
-│  • Mint tokens without valid burn                         │
-│  • Forge proofs                                           │
-│  • Change amounts or recipients                           │
+│  • Mint tokens without valid burn                          │
+│  • Forge proofs                                            │
+│  • Change amounts or recipients                            │
 └────────────────────────────────────────────────────────────┘
 ```
 
