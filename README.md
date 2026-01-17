@@ -50,12 +50,46 @@ A Dockerized platform integrating MQTT, Web3, and IoT protocols to deliver real-
 
 ---
 
-### 📜 Provenance
-**[Project details coming soon]**
+### 🌱 Carbon Credit Marketplace
+**Decentralized carbon credit trading platform with NFT-based certificates**
 
-A file exploring provenance and traceability concepts in blockchain systems.
+A blockchain-based marketplace for trading carbon credits as NFTs, featuring auction functionality, admin controls, and comprehensive provenance tracking.
 
-- [📄 View File](./Provenance)
+#### Key Features:
+- 💰 Fixed price listings and auctions
+- 🎨 NFT-based carbon credit certificates
+- 🔒 Admin controls and fee management
+- 📊 Real-time tracking and transparency
+- 🛡️ Pausable contract for emergency stops
+- 💳 ERC20 payment token integration
+
+#### Documentation:
+- [📖 Contract Documentation](./Carbon/docs/contracts/CarbonCreditMarketplace.md) - Complete smart contract reference
+- [🔌 API Reference](./Carbon/docs/api/CarbonCreditMarketplace.md) - Function signatures and events
+- [🎨 UI Implementation](./Carbon/docs/UI/) - Admin dashboard and integration guides
+
+**Tech Stack:** Solidity, ERC721 (NFTs), ERC20 (Payments), Smart Contract Security
+
+---
+
+### 🔐 Provenance System
+**End-to-end provenance implementation for energy token integrity**
+
+An audit-ready, event-centric provenance system that delivers fast user UX with strong cryptographic anchoring. The system tracks energy token provenance from device readings through bridging to NFT certificate minting.
+
+#### Key Features:
+- ⚡ Real-time UX with single-transaction bridging
+- 🔒 Audit-grade provenance with deterministic hashing
+- 📊 Minimal on-chain load with off-chain detail retention
+- 🔗 Device-to-NFT traceability
+- 🌳 Merkle tree commitments for period aggregation
+- 📢 Event-driven architecture
+
+#### Documentation:
+- [📖 Complete Implementation Guide](./Provenance/README.md) - Full system design and architecture
+- [🔄 Provenance Flow](./Provenance/Provenance.md) - Cryptographic proof chain details
+
+**Tech Stack:** Solidity, Event Sourcing, Merkle Trees, IPFS, Keccak256 Hashing
 
 ---
 
@@ -105,15 +139,22 @@ A file exploring provenance and traceability concepts in blockchain systems.
 potfolio/
 ├── Bridge/                          # Cross-chain bridge system
 │   ├── CrossChainBridge.md         # Complete flow documentation
-│   ├── BridgeRelayer.md             # Relayer script documentation
-│   └── Contracts/                   # Smart contract documentation
-│       ├── Gateway.md               # Mock Axelar Gateway
-│       ├── BridgeEmitter            # Source chain contract
-│       └── BridgeReceiver.md        # Destination chain contract
-├── Hepek/                           # Web3 MQTT Master platform
-│   └── HepekWeb3MQTTDevice.md       # Platform documentation
-├── Provenance                       # Provenance file
-└── README.md                        # This file
+│   ├── BridgeRelayer.md            # Relayer script documentation
+│   └── Contracts/                  # Smart contract documentation
+│       ├── Gateway.md              # Mock Axelar Gateway
+│       ├── BridgeEmitter           # Source chain contract
+│       └── BridgeReceiver.md       # Destination chain contract
+├── Carbon/                          # Carbon credit marketplace
+│   └── docs/                       # Documentation
+│       ├── contracts/              # Smart contract reference
+│       ├── api/                    # API documentation
+│       └── UI/                     # UI implementation guides
+├── Hepek/                          # Web3 MQTT Master platform
+│   └── HepekWeb3MQTTDevice.md      # Platform documentation
+├── Provenance/                     # Provenance system
+│   ├── README.md                   # Implementation guide
+│   └── Provenance.md               # Cryptographic proof chain
+└── README.md                       # This file
 ```
 
 ---
