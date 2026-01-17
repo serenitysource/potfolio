@@ -50,12 +50,38 @@ A Dockerized platform integrating MQTT, Web3, and IoT protocols to deliver real-
 
 ---
 
-### 📜 Provenance
-**[Project details coming soon]**
+### 🌱 Carbon Credit Marketplace
+**Enterprise-grade NFT marketplace for carbon credit trading with blockchain-backed provenance**
 
-A file exploring provenance and traceability concepts in blockchain systems.
+A comprehensive decentralized marketplace platform enabling transparent carbon credit tokenization, trading, and retirement through NFT certificates. Features include fixed-price sales, auction systems, admin analytics dashboard, and full provenance tracking.
 
-- [📄 View File](./Provenance)
+#### Key Features:
+- 🏪 **NFT Marketplace** - Fixed-price listings and time-based auctions
+- 💰 **ERC20 Payment System** - Flexible token-based transactions
+- 📊 **Admin Dashboard** - Real-time analytics, user management, and platform controls
+- 🔐 **User Verification** - KYC-ready user validation system
+- 📈 **Financial Analytics** - Revenue tracking, trading volume analysis, and reporting
+- 🛡️ **Security Controls** - Pausable contracts, fee management, and emergency protocols
+- 🚫 **User Management** - Blocking, verification, and risk assessment tools
+
+#### Documentation:
+- [📖 Marketplace Contract](./Carbon/docs/contracts/CarbonCreditMarketplace.md) - Complete smart contract documentation
+- [🔧 API Reference](./Carbon/docs/api/CarbonCreditMarketplace.md) - Quick function lookup and usage
+- [📊 Admin Dashboard Master Plan](./Carbon/docs/UI/ADMIN_DASHBOARD_MASTER_PLAN.md) - Enterprise dashboard vision
+- [✅ Admin Dashboard Implementation](./Carbon/docs/UI/ADMIN_DASHBOARD_IMPLEMENTATION_PLAN.md) - Implementation status
+- [🔌 Dashboard Architecture](./Carbon/docs/UI/ADMIN_DASHBOARD_CONNECTION_ARCHITECTURE.md) - Technical architecture
+- [🛑 Blocked Users Integration](./Carbon/docs/UI/BLOCKED_USERS_INTEGRATION.md) - User restriction system
+
+**Tech Stack:** Solidity, React, Material-UI, ethers.js, Node.js, WebSockets
+
+---
+
+### 📜 Provenance System
+**End-to-end blockchain provenance design for energy token ecosystems**
+
+A comprehensive audit-ready provenance system connecting IoT energy devices to carbon credit NFTs through deterministic hashing, event-centric architecture, and cross-chain bridging.
+
+- <a>📖 Full Documentation</a> - Complete provenance architecture and flow
 
 ---
 
@@ -71,6 +97,7 @@ A file exploring provenance and traceability concepts in blockchain systems.
 - Cross-chain Bridges
 - Zero-Knowledge Proofs
 - Ethereum/EVM Networks
+- NFT Marketplaces & Auctions
 
 </td>
 <td>
@@ -81,6 +108,7 @@ A file exploring provenance and traceability concepts in blockchain systems.
 - MQTT & IoT Protocols
 - REST APIs (FastAPI)
 - Event-Driven Architecture
+- Real-time Analytics & Dashboards
 
 </td>
 </tr>
@@ -96,6 +124,7 @@ A file exploring provenance and traceability concepts in blockchain systems.
 ✅ **IoT & Real-Time Systems** - MQTT, Modbus, and real-time data streaming  
 ✅ **DevOps & Deployment** - Docker, CI/CD, and automated deployment pipelines  
 ✅ **System Architecture** - End-to-end system design and documentation  
+✅ **NFT Marketplace Development** - Enterprise-grade trading platforms with admin dashboards  
 
 ---
 
@@ -110,9 +139,22 @@ potfolio/
 │       ├── Gateway.md               # Mock Axelar Gateway
 │       ├── BridgeEmitter            # Source chain contract
 │       └── BridgeReceiver.md        # Destination chain contract
+├── Carbon/                          # Carbon credit marketplace
+│   └── docs/
+│       ├── api/                     # API references
+│       │   └── CarbonCreditMarketplace.md
+│       ├── contracts/               # Contract documentation
+│       │   └── CarbonCreditMarketplace.md
+│       └── UI/                      # UI integration guides
+│           ├── ADMIN_DASHBOARD_MASTER_PLAN.md
+│           ├── ADMIN_DASHBOARD_IMPLEMENTATION_PLAN.md
+│           ├── ADMIN_DASHBOARD_INTEGRATION_COMPLETE.md
+│           ├── ADMIN_DASHBOARD_CONNECTION_ARCHITECTURE.md
+│           └── BLOCKED_USERS_INTEGRATION.md
 ├── Hepek/                           # Web3 MQTT Master platform
 │   └── HepekWeb3MQTTDevice.md       # Platform documentation
-├── Provenance                       # Provenance file
+├── Provenance/                      # Provenance system design
+│   └── README.md                    # End-to-end provenance architecture
 └── README.md                        # This file
 ```
 
