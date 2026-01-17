@@ -11,7 +11,7 @@
 <img src="https://img.shields.io/badge/Blockchain-Anchored-blue?logo=ethereum" />
 <img src="https://img.shields.io/badge/Provenance-Verified-green?logo=verified" />
 <img src="https://img.shields.io/badge/Audit-Ready-purple?logo=shield" />
-<img src="https://img.shields.io/badge/Event-Driven-orange?logo=clockify" />
+<img src="https://img.shields.io/badge/Event-Driven-orange?logo=webhook" />
 </div>
 
 ---
