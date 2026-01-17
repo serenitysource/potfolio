@@ -1,108 +1,246 @@
-# End-to-End Provenance Flow
 
-## 1. System goal (what must be proven)
+<div align="center">
+<a href="https://github.serenity.energy" style="font-size:1.2em; font-weight:bold; color:#2d8cff;">
+📖 View Full Documentation Site: https://github.serenity.energy
+</a>
+</div>
+<div align="center">
+<h1>🔐 <span style="color:#2d8cff">End-to-End Provenance Flow</span> 🔗</h1>
+<h3>Cryptographic Proof Chain for Energy Token Integrity</h3>
+<img src="https://img.shields.io/badge/Blockchain-Anchored-blue?logo=ethereum" />
+<img src="https://img.shields.io/badge/Provenance-Verified-green?logo=verified" />
+<img src="https://img.shields.io/badge/Audit-Ready-purple?logo=shield" />
+<img src="https://img.shields.io/badge/Merkle-Trees-orange?logo=tree" />
+</div>
+
+---
+
+## 🎯 1. System Goal (What Must Be Proven)
 
 This system must provide three things at once:
 
-- **Real-time UX**
-  - Users can transfer ERGON/CARBON freely between wallets and bridge quickly.
-- **Strong provenance**
-  - An auditor can later verify that CARBON supply came from real device readings, with an integrity chain back to the device’s metering database.
-- **Minimal on-chain load**
-  - On-chain storage is limited to anchors (cryptographic commitments) plus enough events to reconstruct proof paths, while detailed per-minute data remains off-chain (MQTT/DB).
+<table>
+<tr>
+<td width="33%" align="center">
+    <h3>⚡ Real-time UX</h3>
+    <p>Users can transfer <span style="color:#2ecc71"><strong>ERGON</strong></span>/<span style="color:#9b59b6"><strong>CARBON</strong></span> freely between wallets and bridge quickly.</p>
+</td>
+<td width="33%" align="center">
+    <h3>🔒 Strong Provenance</h3>
+    <p>Auditors can verify that <span style="color:#9b59b6"><strong>CARBON</strong></span> supply came from real device readings with integrity chain back to device metering database.</p>
+</td>
+<td width="33%" align="center">
+    <h3>📊 Minimal On-Chain Load</h3>
+    <p>On-chain storage limited to anchors (cryptographic commitments) while detailed per-minute data remains off-chain.</p>
+</td>
+</tr>
+</table>
 
-**Key idea:** Keep minute-level readings in the database, but anchor each reading on-chain via a deterministic `canonical_reading_hash` and mint/burn events that reference it.
+<div style="background-color:#e7f3ff; padding:15px; border-radius:8px; border-left:4px solid #2d8cff; margin:20px 0;">
+<strong>💡 Key Idea:</strong> Keep minute-level readings in the database, but anchor each reading on-chain via a deterministic <code>canonical_reading_hash</code> and mint/burn events that reference it.
+</div>
 
-## 2. Components and responsibilities
+---
 
-### A. HEPEK device runtime (`contract.py`)
+## 🧩 2. Components and Responsibilities
 
-- Reads meter deltas (minute granularity).
-- Builds a canonical reading envelope.
-- Computes a deterministic `canonical_reading_hash` (`bytes32`, `keccak256`).
-- Calls `ErgonEnergy.SC_Power_OUT_Alloc(produced, exported, canonical_reading_hash)` on-chain.
-- Persists the same hash and tx metadata in DB/MQTT for later audit reconstruction.
+### 🟠 A. HEPEK Device Runtime (`contract.py`)
 
-### B. Energy accounting contract (`ErgonEnergy.sol`)
+- ✅ Reads meter deltas (minute granularity).
+- ✅ Builds a canonical reading envelope.
+- ✅ Computes a deterministic <code>canonical_reading_hash</code> (<code>bytes32</code>, <code>keccak256</code>).
+- ✅ Calls <code style="color:#2ecc71">ErgonEnergy.SC_Power_OUT_Alloc(produced, exported, canonical_reading_hash)</code> on-chain.
+- ✅ Persists the same hash and tx metadata in DB/MQTT for later audit reconstruction.
 
-- Receives readings and enforces anti-replay (e.g., `usedReading[readingHash]`).
-- Emits audit events that include `canonical_reading_hash` and derived allocations.
-- Calls token contracts to mint/burn:
-  - `Ergon.increaseSupply(...)`
-  - `Carbon.increaseSupply(...)`
+### 🟣 B. Energy Accounting Contract (`ErgonEnergy.sol`)
+
+- ✅ Receives readings and enforces anti-replay (e.g., <code>usedReading[readingHash]</code>).
+- ✅ Emits audit events that include <code>canonical_reading_hash</code> and derived allocations.
+- ✅ Calls token contracts to mint/burn:
+  - <code style="color:#2ecc71">Ergon.increaseSupply(...)</code>
+  - <code style="color:#9b59b6">Carbon.increaseSupply(...)</code>
   - Burn calls for imports or settlement (depending on the accounting rules).
 
-### C. ERC-20 tokens (`Carbon.sol`, `Ergon.sol`)
+### 🟢 C. ERC-20 Tokens (`Carbon.sol`, `Ergon.sol`)
 
-- Hold balances and support normal ERC-20 transfers.
-- `increaseSupply(to, amount)` is the core mint entrypoint (in `Carbon.sol` it is typically restricted to `onlyEngine`).
-- Burning is also restricted to `onlyEngine` (e.g., `burnFrom(...)`).
+- ✅ Hold balances and support normal ERC-20 transfers.
+- ✅ <code>increaseSupply(to, amount)</code> is the core mint entrypoint (in <code style="color:#9b59b6">Carbon.sol</code> it is typically restricted to <code>onlyEngine</code>).
+- ✅ Burning is also restricted to <code>onlyEngine</code> (e.g., <code>burnFrom(...)</code>).
 
-This separation keeps token contracts simple while ensuring that all “meaning” (mint/burn justification) is derived from `ErgonEnergy` events.
+<div style="background-color:#fff9e6; padding:15px; border-radius:8px; border-left:4px solid #f39c12; margin:20px 0;">
+<strong>📝 Design Note:</strong> This separation keeps token contracts simple while ensuring that all "meaning" (mint/burn justification) is derived from <code>ErgonEnergy</code> events.
+</div>
 
-## 3. Canonical `canonical_reading_hash` (the audit anchor)
+---
 
-### 3.1 What the hash is (and why it matters)
+## 🔑 3. Canonical `canonical_reading_hash` (The Audit Anchor)
 
-`canonical_reading_hash` is the cryptographic join key across:
+### 3.1 What the Hash Is (And Why It Matters)
 
-- The raw reading stored off-chain (DB/MQTT).
-- The on-chain transaction that submitted the reading.
-- The on-chain audit/mint events that describe how supply was derived.
+<code>canonical_reading_hash</code> is the **cryptographic join key** across:
 
-It exists to support:
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="33%" style="background-color:#e8f5e9; padding:15px; text-align:center;">
+    <strong>📊 Off-Chain</strong><br/>
+    Raw reading stored in DB/MQTT
+</td>
+<td width="33%" style="background-color:#e3f2fd; padding:15px; text-align:center;">
+    <strong>⛓️ On-Chain TX</strong><br/>
+    Transaction that submitted reading
+</td>
+<td width="33%" style="background-color:#f3e5f5; padding:15px; text-align:center;">
+    <strong>🎯 Audit Events</strong><br/>
+    Events describing supply derivation
+</td>
+</tr>
+</table>
 
-- Anti-replay (the engine can reject a duplicate hash).
-- A cryptographic link between telemetry records and EVM state transitions.
-- Deterministic audit reconstruction (recompute the hash from DB data and match it to chain events).
+**It exists to support:**
 
-Note: Solidity code may refer to this value as `readingHash` or `reading_hash` as a parameter name; this document consistently uses `canonical_reading_hash` for clarity.
+- 🚫 **Anti-replay** - The engine can reject a duplicate hash
+- 🔗 **Cryptographic link** - Between telemetry records and EVM state transitions
+- ✅ **Deterministic audit** - Recompute the hash from DB data and match it to chain events
 
-### 3.2 Deterministic hashing: prefer the “strong” version
+<div style="background-color:#fff3e0; padding:12px; border-radius:6px; margin:15px 0;">
+<strong>📌 Note:</strong> Solidity code may refer to this value as <code>readingHash</code> or <code>reading_hash</code> as a parameter name; this document consistently uses <code>canonical_reading_hash</code> for clarity.
+</div>
+
+### 3.2 Deterministic Hashing: Prefer the "Strong" Version
 
 Two hashing approaches typically exist:
 
-- `make_reading_hash(...)` (minimal payload)
-- `make_deterministic_reading_hash(...)` (typed + normalized + schema + direction + factor)
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="50%" style="background-color:#ffebee; padding:20px;">
+    <h4>⚠️ Minimal Payload</h4>
+    <code>make_reading_hash(...)</code>
+    <p>Basic hash without normalization</p>
+    <p style="color:#e74c3c;"><strong>NOT RECOMMENDED</strong></p>
+</td>
+<td width="50%" style="background-color:#e8f5e9; padding:20px;">
+    <h4>✅ Strong & Deterministic</h4>
+    <code>make_deterministic_reading_hash(...)</code>
+    <p style="color:#2ecc71;"><strong>RECOMMENDED</strong></p>
+    <p>Typed + normalized + schema + direction + factor</p>
+</td>
+</tr>
+</table>
 
-The deterministic version is safer because it enforces:
+The **deterministic version** is safer because it enforces:
 
-- Device ID normalization.
-- Timestamp as an integer slot (no format ambiguity).
-- Produced/exported values as integers (avoids float drift).
-- A schema/version marker.
-- Canonical JSON encoding with stable separators.
+- ✅ Device ID normalization
+- ✅ Timestamp as an integer slot (no format ambiguity)
+- ✅ Produced/exported values as integers (avoids float drift)
+- ✅ A schema/version marker
+- ✅ Canonical JSON encoding with stable separators
 
-This is the property auditors care about: the digest can be reproduced exactly from the same source data.
+<div style="background-color:#e7f3ff; padding:15px; border-radius:8px; border-left:4px solid #2d8cff; margin:20px 0;">
+<strong>🎯 Auditor Requirement:</strong> The digest can be reproduced exactly from the same source data.
+</div>
 
-### 3.3 Should `canonical_reading_hash` be included in MQTT payload?
+### 3.3 Should `canonical_reading_hash` Be Included in MQTT Payload?
 
-Yes. The intended pattern is:
+**Yes.** The intended pattern is:
 
-- **On-chain:** store/emit `canonical_reading_hash`.
-- **Off-chain:** store:
-  - `canonical_reading_hash` (same value),
-  - the original meter fields,
-  - transaction metadata (`tx_hash`, and ideally block/log position).
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="50%" style="background-color:#e3f2fd; padding:15px;">
+    <h4>⛓️ On-Chain</h4>
+    <p>Store/emit <code>canonical_reading_hash</code></p>
+</td>
+<td width="50%" style="background-color:#e8f5e9; padding:15px;">
+    <h4>📊 Off-Chain</h4>
+    <p>Store:</p>
+    <ul>
+        <li><code>canonical_reading_hash</code> (same value)</li>
+        <li>Original meter fields</li>
+        <li>Transaction metadata (<code>tx_hash</code>, block/log position)</li>
+    </ul>
+</td>
+</tr>
+</table>
 
-Recommendation (audit-friendly DB fields per reading):
+**Recommendation: Audit-Friendly DB Fields Per Reading**
 
-1. `canonical_reading_hash` (bytes32 hex)
-2. `device_id` (normalized lowercase address)
-3. `timestamp_slot` (epoch-minute `int`)
-4. `produced_power`, `export_power`, `factor`, `direction`
-5. `chain_id`
-6. `tx_hash`
-7. `block_number`
-8. `log_index` (index of the engine audit event log)
-9. `ergon_energy_contract`
-10. Optional: `prev_hash` (see Section 9)
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+<tr style="background-color:#2d8cff; color:white;">
+    <th style="padding:10px; text-align:left;">#</th>
+    <th style="padding:10px; text-align:left;">Field Name</th>
+    <th style="padding:10px; text-align:left;">Type</th>
+    <th style="padding:10px; text-align:left;">Description</th>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;">1</td>
+    <td style="padding:8px;"><code>canonical_reading_hash</code></td>
+    <td style="padding:8px;">bytes32 hex</td>
+    <td style="padding:8px;">Primary cryptographic anchor</td>
+</tr>
+<tr>
+    <td style="padding:8px;">2</td>
+    <td style="padding:8px;"><code>device_id</code></td>
+    <td style="padding:8px;">string</td>
+    <td style="padding:8px;">Normalized lowercase address</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;">3</td>
+    <td style="padding:8px;"><code>timestamp_slot</code></td>
+    <td style="padding:8px;">int</td>
+    <td style="padding:8px;">Epoch-minute integer</td>
+</tr>
+<tr>
+    <td style="padding:8px;">4-7</td>
+    <td style="padding:8px;"><code>produced_power</code>, <code>export_power</code>, <code>factor</code>, <code>direction</code></td>
+    <td style="padding:8px;">numeric</td>
+    <td style="padding:8px;">Meter reading values</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;">8</td>
+    <td style="padding:8px;"><code>chain_id</code></td>
+    <td style="padding:8px;">int</td>
+    <td style="padding:8px;">Blockchain identifier</td>
+</tr>
+<tr>
+    <td style="padding:8px;">9</td>
+    <td style="padding:8px;"><code>tx_hash</code></td>
+    <td style="padding:8px;">bytes32 hex</td>
+    <td style="padding:8px;">Transaction hash</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;">10</td>
+    <td style="padding:8px;"><code>block_number</code></td>
+    <td style="padding:8px;">int</td>
+    <td style="padding:8px;">Block height</td>
+</tr>
+<tr>
+    <td style="padding:8px;">11</td>
+    <td style="padding:8px;"><code>log_index</code></td>
+    <td style="padding:8px;">int</td>
+    <td style="padding:8px;">Index of engine audit event log</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;">12</td>
+    <td style="padding:8px;"><code>ergon_energy_contract</code></td>
+    <td style="padding:8px;">address</td>
+    <td style="padding:8px;">Engine contract address</td>
+</tr>
+<tr>
+    <td style="padding:8px;">13</td>
+    <td style="padding:8px;"><code>prev_hash</code></td>
+    <td style="padding:8px;">bytes32 hex</td>
+    <td style="padding:8px;">Optional: previous reading hash (see Section 9)</td>
+</tr>
+</table>
 
-This makes provenance reconstruction deterministic and fast.
+<div style="background-color:#e8f5e9; padding:15px; border-radius:8px; border-left:4px solid #2ecc71; margin:20px 0;">
+<strong>✅ Result:</strong> This makes provenance reconstruction <strong>deterministic and fast</strong>.
+</div>
 
-## 4. End-to-end flow (minute reading → tokens minted)
+---
 
-### 4.1 High-level block diagram
+## 🔄 4. End-to-End Flow (Minute Reading → Tokens Minted)
+
+### 4.1 High-Level Block Diagram
 
 ```text
 ┌──────────────┐      MQTT/DB write (payload + canonical_reading_hash + tx_meta)
@@ -120,193 +258,503 @@ This makes provenance reconstruction deterministic and fast.
        └───────── emits audit events (canonical_reading_hash anchored) ─────┘
 ```
 
-### 4.2 Detailed step-by-step sequence
+### 4.2 Detailed Step-by-Step Sequence
 
-1. **Device creates envelope + hash**
+<details>
+<summary><strong>📋 Click to Expand: Complete Transaction Flow</strong></summary>
+
+1. **🏗️ Device Creates Envelope + Hash**
    - Build a canonical envelope with `device_id`, `timestamp`, `direction`, `produced/exported`, and `factor`.
    - Compute `canonical_reading_hash = make_deterministic_reading_hash(envelope)`.
-2. **Device submits reading to chain**
+
+2. **📤 Device Submits Reading to Chain**
    - Invoke `SC_Power_OUT_Alloc(produced_power, export_power, canonical_reading_hash)` (signed by the device key).
-3. **Device stores DB/MQTT record**
+
+3. **💾 Device Stores DB/MQTT Record**
    - After receipt, persist `canonical_reading_hash` and the originating `tx_hash` with the telemetry payload.
-4. **Engine validates anti-replay**
+
+4. **🛡️ Engine Validates Anti-Replay**
    - `ErgonEnergy` checks its anti-replay mapping and rejects duplicates.
-5. **Engine emits audit events**
+
+5. **📢 Engine Emits Audit Events**
    - `ErgonEnergy` emits events that include:
-     - the anchor (`canonical_reading_hash`)
-     - the measured inputs (produced/exported)
-     - derived allocations / rule flags
-     - minted token quantities
-6. **Engine mints tokens**
+     - The anchor (`canonical_reading_hash`)
+     - The measured inputs (produced/exported)
+     - Derived allocations / rule flags
+     - Minted token quantities
+
+6. **🪙 Engine Mints Tokens**
    - `ErgonEnergy` calls token contracts:
      - `Ergon.increaseSupply(user_or_device, ergonAmount)`
      - `Carbon.increaseSupply(user_or_device, carbonAmount)`
 
-Interpretation:
+</details>
 
-> “This amount of CARBON exists because this specific `canonical_reading_hash` was accepted and allocated by the engine.”
+<div style="background-color:#f3e5f5; padding:15px; border-radius:8px; border-left:4px solid #9b59b6; margin:20px 0;">
+<strong>💭 Interpretation:</strong> "This amount of <span style="color:#9b59b6"><strong>CARBON</strong></span> exists because this specific <code>canonical_reading_hash</code> was accepted and allocated by the engine."
+</div>
 
-## 5. What to emit on-chain (and why)
+---
+
+## 📢 5. What to Emit On-Chain (And Why)
 
 Auditors need evidence that:
 
-- readings existed,
-- readings were not replayed,
-- minting was derived from readings,
-- later burns (for certificates) correspond to real minted supply.
+- ✅ Readings existed
+- ✅ Readings were not replayed
+- ✅ Minting was derived from readings
+- ✅ Later burns (for certificates) correspond to real minted supply
 
-### 5.1 Minimum event set (recommended)
+### 5.1 Minimum Event Set (Recommended)
 
-For each accepted reading, emit one canonical engine audit event (e.g., `ReadingAccepted`):
+For each accepted reading, emit one canonical engine audit event (e.g., <code style="color:#9b59b6"><strong>ReadingAccepted</strong></code>):
 
-- `device`
-- `timestamp_slot`
-- `canonical_reading_hash`
-- `produced`, `exported`, `factor`
-- `ergon_minted`, `carbon_minted`
-- Optional: `reason_code` / `rule_flags`
+**Benefits of This Approach:**
 
-Why:
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+<tr style="background-color:#2d8cff; color:white;">
+    <th style="padding:10px; text-align:left;">Benefit</th>
+    <th style="padding:10px; text-align:left;">Description</th>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><strong>🔄 Reconstruction</strong></td>
+    <td style="padding:10px;">Enables reconstruction of supply provenance per reading</td>
+</tr>
+<tr>
+    <td style="padding:10px;"><strong>💾 Storage Efficiency</strong></td>
+    <td style="padding:10px;">No need to store raw telemetry on-chain</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><strong>🔗 Linkage</strong></td>
+    <td style="padding:10px;">Engine event ties mint amounts to <code>canonical_reading_hash</code></td>
+</tr>
+<tr>
+    <td style="padding:10px;"><strong>📊 ERC-20 Compatible</strong></td>
+    <td style="padding:10px;">Standard <code>Transfer(0x0 → to, amount)</code> logs still emitted</td>
+</tr>
+</table>
 
-- Enables reconstruction of supply provenance per reading without storing raw telemetry on-chain.
-- ERC-20 minting already produces standard `Transfer(0x0 → to, amount)` logs, but the engine event is what ties mint amounts to `canonical_reading_hash`.
+**Example Solidity Event:**
 
-### 5.2 Why not “minute lots” on-chain
+```solidity
+event ReadingAccepted(
+    address indexed device,
+    uint256 indexed timestamp_slot,
+    bytes32 indexed canonical_reading_hash,
+    uint256 produced,
+    uint256 exported,
+    uint256 factor,
+    uint256 ergon_minted,
+    uint256 carbon_minted,
+    uint8 reason_code  // Optional: rule flags
+);
+```
 
-Bridge slowdowns are a common failure mode when too much fine-grained provenance is pushed into the bridged representation.
+### 5.2 Why Not "Minute Lots" On-Chain
 
-An auditor typically does not require “minute provenance on the bridged chain”. Instead, they require:
+<div style="background-color:#fff3e0; padding:15px; border-radius:8px; border-left:4px solid #f39c12; margin:20px 0;">
+<strong>⚠️ Common Failure Mode:</strong> Bridge slowdowns occur when too much fine-grained provenance is pushed into the bridged representation.
+</div>
 
-- Proof that the source chain contains immutable anchors.
-- A provable mapping from certificate retirement (burn) → subset of those anchors.
+An auditor typically **does not require** "minute provenance on the bridged chain". Instead, they require:
 
-So:
+- ✅ Proof that the source chain contains immutable anchors
+- ✅ A provable mapping from certificate retirement (burn) → subset of those anchors
 
-- Keep minute anchors in the source chain + DB.
-- Optionally aggregate into period commitments (daily/monthly) for fast proofs.
-- Bridge only ERC-20 balances for UX.
+**So:**
 
-## 6. Provenance model that stays fast for users
+- 📌 Keep minute anchors in the source chain + DB
+- 📊 Optionally aggregate into period commitments (daily/monthly) for fast proofs
+- 🌉 Bridge only ERC-20 balances for UX
+
+---
+
+## ⚡ 6. Provenance Model That Stays Fast for Users
 
 The design targets:
 
-- Fast transfers/bridging in real time.
-- Minimal on-chain data sufficient for audit.
-- The ability to prove device contributions at certificate mint/retirement time (e.g., “20% device A, rest devices B..F”).
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="33%" style="background-color:#e3f2fd; padding:20px; text-align:center;">
+    <h3>🚀 Fast Transfers</h3>
+    <p>Real-time bridging without provenance overhead</p>
+</td>
+<td width="33%" style="background-color:#e8f5e9; padding:20px; text-align:center;">
+    <h3>📉 Minimal On-Chain Data</h3>
+    <p>Only what's sufficient for audit</p>
+</td>
+<td width="33%" style="background-color:#f3e5f5; padding:20px; text-align:center;">
+    <h3>🎯 Device Proof at Mint</h3>
+    <p>Prove contributions at certificate time</p>
+</td>
+</tr>
+</table>
 
-### 6.1 Correct mental model: balances move, provenance stays anchored
+### 6.1 Correct Mental Model: Balances Move, Provenance Stays Anchored
 
-ERC-20 transfers do not need to “move provenance lots”. Provenance is not “which user owns which reading”; provenance is “what evidence created this supply”.
+<div style="background-color:#e7f3ff; padding:20px; border-radius:10px; border:2px solid #2d8cff; margin:20px 0;">
 
-Model:
+<h4>🧠 Key Concept</h4>
 
-- Source chain stores immutable reading anchors/events.
-- CARBON token supply exists because those anchors existed.
-- Users can trade CARBON freely.
-- When minting an NFT certificate (burning CARBON), generate an audit proof showing the burned amount is covered by a set of anchors (or period commitments).
+<p>ERC-20 transfers <strong>do not need to "move provenance lots"</strong>. Provenance is not "which user owns which reading"; provenance is "what evidence created this supply".</p>
 
-## 7. Period commitments (optional but powerful)
+<p><strong>Model:</strong></p>
+<ul>
+<li>✅ Source chain stores immutable reading anchors/events</li>
+<li>✅ <span style="color:#9b59b6"><strong>CARBON</strong></span> token supply exists because those anchors existed</li>
+<li>✅ Users can trade <span style="color:#9b59b6"><strong>CARBON</strong></span> freely</li>
+<li>✅ When minting an NFT certificate (burning <span style="color:#9b59b6"><strong>CARBON</strong></span>), generate an audit proof showing the burned amount is covered by a set of anchors (or period commitments)</li>
+</ul>
 
-This is the “middle layer” between minute anchors and certificate proofs.
+</div>
 
-### 7.1 What `commitDevicePeriod(device, periodId, periodSum, periodRoot)` means
+---
+
+## 🌳 7. Period Commitments (Optional But Powerful)
+
+This is the **"middle layer"** between minute anchors and certificate proofs.
+
+### 7.1 What `commitDevicePeriod(device, periodId, periodSum, periodRoot)` Means
 
 For a device and a period (day/week/month), compute:
 
-- `periodSum`: total carbon minted for that device in that period (or total kWh / total carbon delta)
-- `periodRoot`: a Merkle root over all reading anchors, typically leaves such as `(canonical_reading_hash, carbon_amount)`
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="50%" style="background-color:#e8f5e9; padding:20px;">
+    <h4>📊 <code>periodSum</code></h4>
+    <p>Total carbon minted for that device in that period (or total kWh / total carbon delta)</p>
+</td>
+<td width="50%" style="background-color:#e3f2fd; padding:20px;">
+    <h4>🌳 <code>periodRoot</code></h4>
+    <p>A Merkle root over all reading anchors, typically leaves such as <code>(canonical_reading_hash, carbon_amount)</code></p>
+</td>
+</tr>
+</table>
 
-Store these commitments on-chain (mapping + event), typically in mappings like `devicePeriodCommit[device][periodId] = {sum, root}` and/or emitted as events for indexers.
+Store these commitments on-chain (mapping + event), typically in mappings like:
 
-### 7.2 What `commitPeriodGlobal(periodId, globalRoot)` means
+```solidity
+mapping(address => mapping(uint256 => DevicePeriodCommit)) public devicePeriodCommit;
+
+struct DevicePeriodCommit {
+    uint256 sum;
+    bytes32 root;
+}
+```
+
+**Merkle Tree Structure:**
+
+```mermaid
+graph TD
+    A[Global Period Root] --> B[Device A Commitment]
+    A --> C[Device B Commitment]
+    A --> D[Device C Commitment]
+    B --> E[Reading 1]
+    B --> F[Reading 2]
+    B --> G[Reading 3]
+    C --> H[Reading 4]
+    C --> I[Reading 5]
+    D --> J[Reading 6]
+    D --> K[Reading 7]
+    
+    style A fill:#9b59b6,color:#fff
+    style B fill:#2ecc71,color:#fff
+    style C fill:#2ecc71,color:#fff
+    style D fill:#2ecc71,color:#fff
+    style E fill:#3498db,color:#fff
+    style F fill:#3498db,color:#fff
+    style G fill:#3498db,color:#fff
+    style H fill:#3498db,color:#fff
+    style I fill:#3498db,color:#fff
+    style J fill:#3498db,color:#fff
+    style K fill:#3498db,color:#fff
+```
+
+### 7.2 What `commitPeriodGlobal(periodId, globalRoot)` Means
 
 For a given period, compute a Merkle root over all device commitments for that period (e.g., leaves are `(device, sum, root)`). Then store:
 
-- `globalCommit[periodId] = globalRoot`
+```solidity
+mapping(uint256 => bytes32) public globalCommit;
 
-Now an auditor can verify:
+function commitPeriodGlobal(uint256 periodId, bytes32 globalRoot) external {
+    globalCommit[periodId] = globalRoot;
+    emit PeriodGlobalCommitted(periodId, globalRoot, block.timestamp);
+}
+```
 
-- The certificate burn was covered by a set of device periods.
-- Each device period is covered by a set of per-reading anchors (if needed).
+<div style="background-color:#e8f5e9; padding:15px; border-radius:8px; border-left:4px solid #2ecc71; margin:20px 0;">
+<strong>✅ Verification Path:</strong> An auditor can now verify:
+<ul>
+<li>The certificate burn was covered by a set of device periods</li>
+<li>Each device period is covered by a set of per-reading anchors (if needed)</li>
+</ul>
+</div>
 
-### 7.3 Should this be executed automatically when the period elapses?
+### 7.3 Should This Be Executed Automatically When the Period Elapses?
 
-EVM contracts do not self-trigger when time passes.
+<div style="background-color:#fff3e0; padding:15px; border-radius:8px; border-left:4px solid #f39c12; margin:20px 0;">
+<strong>⚠️ Important:</strong> EVM contracts do not self-trigger when time passes.
+</div>
 
-So “automatic” must be off-chain (cron job / relayer / keeper bot). A typical pattern:
+So "automatic" must be **off-chain** (cron job / relayer / keeper bot). A typical pattern:
 
-1. Relayer wakes every N minutes/hours.
-2. Detects a period boundary.
-3. Computes commits (from DB/indexer).
-4. Calls `commitDevicePeriod` and `commitPeriodGlobal`.
+1. 🕐 **Relayer wakes** every N minutes/hours
+2. 📅 **Detects** a period boundary
+3. 🧮 **Computes** commits (from DB/indexer)
+4. 📤 **Calls** `commitDevicePeriod` and `commitPeriodGlobal`
 
-## 8. Bridging: keep it agnostic to lots/periods (best for UX)
+---
 
-### 8.1 Do we need to sync period commits to destination chain periodically?
+## 🌉 8. Bridging: Keep It Agnostic to Lots/Periods (Best for UX)
 
-Not strictly. Two common options:
+### 8.1 Do We Need to Sync Period Commits to Destination Chain Periodically?
 
-- **Option A — No periodic sync (simplest UX)**
-  - Bridge only moves ERC-20 balances.
-  - Destination chain treats the source chain as the provenance authority.
-  - When an NFT certificate is minted (destination or source), fetch proofs from the source (or from DB/indexer) and embed proof/roots into NFT metadata / certificate events.
-- **Option B — Periodic sync (self-contained destination)**
-  - Relayer periodically sends `(periodId, globalRoot)` (and optionally device commits) to destination.
-  - Destination contract stores these roots.
-  - NFT mint on destination can verify proofs against stored roots without querying the source.
+**Not strictly.** Two common options:
 
-If the priority is “fast and frictionless”, Option A is usually sufficient unless a regulator explicitly requires destination-chain self-verification.
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="50%" style="background-color:#d4edda; padding:20px;">
+    <h4>✅ Option A — No Periodic Sync</h4>
+    <p><strong style="color:#2ecc71">SIMPLEST UX</strong></p>
+    <ul>
+        <li>Bridge only moves ERC-20 balances</li>
+        <li>Destination chain treats source chain as provenance authority</li>
+        <li>When NFT certificate is minted (destination or source), fetch proofs from source (or DB/indexer)</li>
+        <li>Embed proof/roots into NFT metadata / certificate events</li>
+    </ul>
+    <p><strong>✅ Best for:</strong> Fast and frictionless user experience</p>
+</td>
+<td width="50%" style="background-color:#fff3cd; padding:20px;">
+    <h4>⚙️ Option B — Periodic Sync</h4>
+    <p><strong style="color:#f39c12">SELF-CONTAINED DESTINATION</strong></p>
+    <ul>
+        <li>Relayer periodically sends <code>(periodId, globalRoot)</code></li>
+        <li>Optionally includes device commits to destination</li>
+        <li>Destination contract stores these roots</li>
+        <li>NFT mint on destination can verify proofs against stored roots without querying source</li>
+    </ul>
+    <p><strong>⚙️ Best for:</strong> Regulator requirements for destination-chain self-verification</p>
+</td>
+</tr>
+</table>
 
-### 8.2 What does destination need during `bridgeMint`?
+<div style="background-color:#e7f3ff; padding:15px; border-radius:8px; border-left:4px solid #2d8cff; margin:20px 0;">
+<strong>💡 Recommendation:</strong> If the priority is "fast and frictionless", <strong>Option A</strong> is usually sufficient unless a regulator explicitly requires destination-chain self-verification.
+</div>
 
-If the destination token represents bridged CARBON balance, it does not need device lists at mint time.
+### 8.2 What Does Destination Need During `bridgeMint`?
+
+If the destination token represents bridged <span style="color:#9b59b6"><strong>CARBON</strong></span> balance, it **does not need device lists at mint time**.
 
 It typically only needs:
 
-- `messageId`
-- `recipient`
-- `amount`
-- Optional: the proof blob for bridge authentication (ZK or gateway proof)
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+<tr style="background-color:#2d8cff; color:white;">
+    <th style="padding:10px; text-align:left;">Parameter</th>
+    <th style="padding:10px; text-align:left;">Purpose</th>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;"><code>messageId</code></td>
+    <td style="padding:8px;">Cross-chain message identifier</td>
+</tr>
+<tr>
+    <td style="padding:8px;"><code>recipient</code></td>
+    <td style="padding:8px;">Destination address for minted tokens</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:8px;"><code>amount</code></td>
+    <td style="padding:8px;">Token amount to mint</td>
+</tr>
+<tr>
+    <td style="padding:8px;"><code>proof</code> (optional)</td>
+    <td style="padding:8px;">ZK or gateway proof for bridge authentication</td>
+</tr>
+</table>
 
-Provenance proofs can be handled later at certificate mint / retirement time.
+**Example Solidity Function:**
 
-## 9. Stronger provenance with hash chaining (optional upgrade)
+```solidity
+function bridgeMint(
+    bytes32 messageId,
+    address recipient,
+    uint256 amount,
+    bytes calldata proof
+) external onlyBridge {
+    require(verifyProof(messageId, proof), "Invalid bridge proof");
+    _mint(recipient, amount);
+    emit BridgeMinted(messageId, recipient, amount);
+}
+```
+
+<div style="background-color:#f3e5f5; padding:15px; border-radius:8px; border-left:4px solid #9b59b6; margin:20px 0;">
+<strong>📝 Note:</strong> Provenance proofs can be handled later at certificate mint / retirement time.
+</div>
+
+---
+
+## 🔗 9. Stronger Provenance with Hash Chaining (Optional Upgrade)
 
 To detect missing readings (even off-chain), add:
 
-- `seq` (monotonic counter per device)
-- `prev_hash` (hash of previous reading)
+<table style="width:100%; margin:20px 0;">
+<tr>
+<td width="50%" style="background-color:#e8f5e9; padding:20px;">
+    <h4>🔢 <code>seq</code></h4>
+    <p>Monotonic counter per device</p>
+    <p>Ensures sequential ordering and detects gaps</p>
+</td>
+<td width="50%" style="background-color:#e3f2fd; padding:20px;">
+    <h4>⛓️ <code>prev_hash</code></h4>
+    <p>Hash of previous reading</p>
+    <p>Creates tamper-evident chain linkage</p>
+</td>
+</tr>
+</table>
 
 Then each reading anchor commits to a chain:
 
-```text
-canonical_reading_hash_t = keccak(device, ts, produced, exported, factor, seq, prev_hash_{t-1})
+**Chaining Formula:**
+
+```solidity
+canonical_reading_hash_t = keccak256(
+    abi.encodePacked(
+        device,
+        timestamp,
+        produced,
+        exported,
+        factor,
+        seq,           // Sequential number
+        prev_hash_t_1  // Previous reading hash
+    )
+);
 ```
 
-This makes gaps or tampering detectable even if a record is deleted from the DB.
+**Sequential Hash Chain Visualization:**
 
-## 10. Summary
+```mermaid
+graph LR
+    A[Reading 1<br/>seq=1<br/>prev=0x0] -->|hash1| B[Reading 2<br/>seq=2<br/>prev=hash1]
+    B -->|hash2| C[Reading 3<br/>seq=3<br/>prev=hash2]
+    C -->|hash3| D[Reading 4<br/>seq=4<br/>prev=hash3]
+    D -->|hash4| E[Reading 5<br/>seq=5<br/>prev=hash4]
+    
+    style A fill:#3498db,color:#fff
+    style B fill:#2ecc71,color:#fff
+    style C fill:#9b59b6,color:#fff
+    style D fill:#f39c12,color:#fff
+    style E fill:#e74c3c,color:#fff
+```
 
-Each meter interval is anchored using a deterministic `canonical_reading_hash` computed from a canonicalized payload (device identifier, epoch time slot, measured production/export values, and allocation factor). The device submits the `canonical_reading_hash` to the on-chain energy engine (`ErgonEnergy`) together with the measured deltas. The engine enforces anti-replay and emits immutable audit events binding each accepted reading to the derived allocations and token mint amounts. The same `canonical_reading_hash` is persisted in MQTT/DB alongside the transaction metadata, enabling deterministic cross-verification between off-chain telemetry and on-chain state transitions. This keeps detailed per-minute telemetry off-chain for scale, while keeping on-chain evidence sufficient for audit.
+<div style="background-color:#e8f5e9; padding:15px; border-radius:8px; border-left:4px solid #2ecc71; margin:20px 0;">
+<strong>✅ Result:</strong> This makes gaps or tampering detectable <strong>even if a record is deleted from the DB</strong>.
+</div>
 
-## 11. Quick answers
+---
 
-### Is `canonical_reading_hash` enough?
+## 📋 10. Summary
 
-Yes, if it is:
+<div style="background-color:#e7f3ff; padding:20px; border-radius:10px; border:2px solid #2d8cff; margin:20px 0;">
 
-- Deterministic (typed + normalized).
-- Stored in DB alongside the raw reading and tx metadata.
-- Referenced by an on-chain audit event that ties it to mint/burn outcomes.
+Each meter interval is anchored using a deterministic <code>canonical_reading_hash</code> computed from a canonicalized payload (device identifier, epoch time slot, measured production/export values, and allocation factor). 
 
-## 12. Glossary
+The device submits the <code>canonical_reading_hash</code> to the on-chain energy engine (<code style="color:#9b59b6"><strong>ErgonEnergy</strong></code>) together with the measured deltas. 
 
-- **`canonical_reading_hash`**: A deterministic `bytes32` anchor (typically `keccak256`) computed from a canonical reading envelope. Used as the cross-system join key for telemetry records, EVM transactions, and engine audit events.
-- **Reading envelope**: The canonical set of fields hashed to produce `canonical_reading_hash` (e.g., normalized `device_id`, `timestamp_slot`, `produced/exported`, `factor`, and a schema/version marker).
-- **`timestamp_slot`**: The reading time represented as an integer slot (commonly “epoch minute”) to avoid ambiguity.
-- **Engine audit event**: A contract event emitted by `ErgonEnergy` that ties an accepted reading anchor to derived allocations and mint/burn outcomes.
-- **Anti-replay**: A contract rule that rejects a previously-seen reading anchor (e.g., using a `usedReading` mapping).
-- **`periodId`**: A period identifier (day/week/month) used for aggregating per-minute anchors into period commitments.
-- **`periodSum`**: The aggregate amount for a device over a period (e.g., total CARBON minted).
-- **`periodRoot`**: A Merkle root committing to all per-reading anchors in a period (often leaves like `(canonical_reading_hash, carbon_amount)`).
-- **`globalRoot`**: A Merkle root committing to all device period commitments for a period (often leaves like `(device, sum, root)`).
+The engine enforces anti-replay and emits immutable audit events binding each accepted reading to the derived allocations and token mint amounts. 
+
+The same <code>canonical_reading_hash</code> is persisted in MQTT/DB alongside the transaction metadata, enabling deterministic cross-verification between off-chain telemetry and on-chain state transitions. 
+
+This keeps detailed per-minute telemetry off-chain for scale, while keeping on-chain evidence sufficient for audit.
+
+</div>
+
+---
+
+## ✅ 11. Quick Answers
+
+<details>
+<summary><strong>❓ Is <code>canonical_reading_hash</code> enough?</strong></summary>
+
+<br/>
+
+**Yes**, if it is:
+
+- ✅ **Deterministic** (typed + normalized)
+- ✅ **Stored in DB** alongside the raw reading and tx metadata
+- ✅ **Referenced by an on-chain audit event** that ties it to mint/burn outcomes
+
+</details>
+
+---
+
+## 📚 12. Glossary
+
+<details>
+<summary><strong>📖 Click to Expand: Complete Terminology Reference</strong></summary>
+
+<br/>
+
+<table style="width:100%; border-collapse:collapse;">
+<tr style="background-color:#2d8cff; color:white;">
+    <th style="padding:10px; text-align:left; width:30%;">Term</th>
+    <th style="padding:10px; text-align:left;">Definition</th>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><code>canonical_reading_hash</code></td>
+    <td style="padding:10px;">A deterministic <code>bytes32</code> anchor (typically <code>keccak256</code>) computed from a canonical reading envelope. Used as the cross-system join key for telemetry records, EVM transactions, and engine audit events.</td>
+</tr>
+<tr>
+    <td style="padding:10px;"><strong>Reading envelope</strong></td>
+    <td style="padding:10px;">The canonical set of fields hashed to produce <code>canonical_reading_hash</code> (e.g., normalized <code>device_id</code>, <code>timestamp_slot</code>, <code>produced/exported</code>, <code>factor</code>, and a schema/version marker).</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><code>timestamp_slot</code></td>
+    <td style="padding:10px;">The reading time represented as an integer slot (commonly "epoch minute") to avoid ambiguity.</td>
+</tr>
+<tr>
+    <td style="padding:10px;"><strong>Engine audit event</strong></td>
+    <td style="padding:10px;">A contract event emitted by <code>ErgonEnergy</code> that ties an accepted reading anchor to derived allocations and mint/burn outcomes.</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><strong>Anti-replay</strong></td>
+    <td style="padding:10px;">A contract rule that rejects a previously-seen reading anchor (e.g., using a <code>usedReading</code> mapping).</td>
+</tr>
+<tr>
+    <td style="padding:10px;"><code>periodId</code></td>
+    <td style="padding:10px;">A period identifier (day/week/month) used for aggregating per-minute anchors into period commitments.</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><code>periodSum</code></td>
+    <td style="padding:10px;">The aggregate amount for a device over a period (e.g., total CARBON minted).</td>
+</tr>
+<tr>
+    <td style="padding:10px;"><code>periodRoot</code></td>
+    <td style="padding:10px;">A Merkle root committing to all per-reading anchors in a period (often leaves like <code>(canonical_reading_hash, carbon_amount)</code>).</td>
+</tr>
+<tr style="background-color:#f5f5f5;">
+    <td style="padding:10px;"><code>globalRoot</code></td>
+    <td style="padding:10px;">A Merkle root committing to all device period commitments for a period (often leaves like <code>(device, sum, root)</code>).</td>
+</tr>
+</table>
+
+</details>
+
+---
+
+<div align="center" style="background-color:#2d8cff; padding:30px; border-radius:15px; margin:30px 0;">
+    <h2 style="color:white; margin:0;">🚀 Ready to Build Trustless Energy Systems</h2>
+    <p style="color:white; margin:10px 0;">Empowering transparent, auditable, and scalable energy token infrastructure</p>
+    <br/>
+    <img src="https://img.shields.io/badge/Solidity-0.8+-blue?logo=solidity" />
+    <img src="https://img.shields.io/badge/Web3-Ready-purple?logo=ethereum" />
+    <img src="https://img.shields.io/badge/Open-Source-green?logo=github" />
+    <img src="https://img.shields.io/badge/Audit-Friendly-orange?logo=shield" />
+</div>
+
+<div align="center">
+    <strong>Made with ❤️ by the Serenity Energy Team</strong>
+    <br/>
+    <a href="https://github.serenity.energy">📖 Documentation</a> • 
+    <a href="https://github.com/serenitysource">💻 GitHub</a> • 
+    <a href="https://github.serenity.energy/support">🤝 Support</a>
+</div>
