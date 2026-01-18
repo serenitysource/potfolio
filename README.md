@@ -115,7 +115,7 @@ potfolio/
 │   └── HepekWeb3MQTTDevice.md       # Platform documentation
 ├── Provenance                       # Provenance documentation
 │   └── Provenance.md                # Design
-│   └── README.md                    # Implementation
+│   └── Implementation.md                    # Implementation
 └── README.md                        # This file
 ```
 
