@@ -32,7 +32,7 @@ Hepek Web3 MQTT Master is a unified platform for real-time energy monitoring, bl
 - <span style="color:#f39c12">**Modbus**</span>: Industrial protocol support for meter data acquisition.
 - <span style="color:#e67e22">**Secrets Management**</span>: Encrypted device secrets and credentials.
 
-<img src="docs/architecture.png" width="600"/>
+<img src="_docs/architecture.png" width="600"/>
 </details>
 
 ---
