@@ -141,7 +141,7 @@ This portfolio represents real-world projects combining blockchain technology, s
 
 <div align="center">
 
-**Built with 🔥 by SerenitySource, Adi Saric**
+**Built with 🔥 by SerenitySource - Adi Saric**
 
 *Blockchain • Web3 • IoT • Smart Contracts*
 
