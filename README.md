@@ -104,7 +104,7 @@ A file exploring provenance and traceability concepts in blockchain systems.
 ```
 potfolio/
 ├── Bridge/                          # Cross-chain bridge system
-│   ├── CrossChainBridge.md         # Complete flow documentation
+│   ├── CrossChainBridge.md          # Complete flow documentation
 │   ├── BridgeRelayer.md             # Relayer script documentation
 │   └── Contracts/                   # Smart contract documentation
 │       ├── Gateway.md               # Mock Axelar Gateway
@@ -112,7 +112,9 @@ potfolio/
 │       └── BridgeReceiver.md        # Destination chain contract
 ├── Hepek/                           # Web3 MQTT Master platform
 │   └── HepekWeb3MQTTDevice.md       # Platform documentation
-├── Provenance                       # Provenance file
+├── Provenance                       # Provenance documentation
+│   └── Provenance.md                # Design
+│   └── README.md                    # Implementation
 └── README.md                        # This file
 ```
 
