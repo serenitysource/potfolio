@@ -55,7 +55,8 @@ A Dockerized platform integrating MQTT, Web3, and IoT protocols to deliver real-
 
 A file exploring provenance and traceability concepts in blockchain systems.
 
-- [📄 View File](./Provenance)
+- [📄 View Design](./Provenance/Provenance.md)
+- [📄 View Implementation](./Provenance/README.md)
 
 ---
 
