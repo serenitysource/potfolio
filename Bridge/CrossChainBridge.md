@@ -147,14 +147,14 @@ STEP 2: BRIDGE EMITTER PROCESSES BURN
                │                         payloadHash,
                │                         payload)
                │
-               └──────────────────────────────────────────┐
-                                                          │
-                                                          │
+               └─────────────────────────────────────────┐
+                                                         │
+                                                         │
 STEP 3: RELAYER DETECTS EVENT                            │
 ═══════════════════════════════════════════════════════════════════════════════
-                                                          │
-                                                          │ WebSocket Listener
-                                                          ▼
+                                                         │
+                                                         │ WebSocket Listener
+                                                         ▼
                                            ┌──────────────────────────┐
                                            │   Bridge Relayer Script  │
                                            │   (Node.js)              │
@@ -234,7 +234,7 @@ STEP 6: ON-CHAIN VERIFICATION (DESTINATION)
     │    "verifyProof(uint256[2],uint256[2][2],               │
     │                 uint256[2],uint256[1])",                │
     │    a, b, c, input                                       │
-    │  )                                                       │
+    │  )                                                      │
     └──────────┬──────────────────────────────────────────────┘
                │
                ▼

@@ -50,14 +50,14 @@ Hepek Web3 MQTT Master is a unified platform for real-time energy monitoring, bl
 
 ## 🧩 Key Technologies
 
-| Technology   | Purpose                        |
-|--------------|--------------------------------|
-| Python 3.10  | Core application logic         |
-| FastAPI      | REST API & web server          |
-| Web3.py      | Blockchain/Ethereum interface  |
-| paho-mqtt    | MQTT client for IoT messaging  |
+| Technology   | Purpose                         |
+|--------------|---------------------------------|
+| Python 3.10  | Core application logic          |
+| FastAPI      | REST API & web server           |
+| Web3.py      | Blockchain/Ethereum interface   |
+| paho-mqtt    | MQTT client for IoT messaging   |
 | Docker       | Containerization & orchestration|
-| Modbus       | Meter data protocol            |
+| Modbus       | Meter data protocol             |
 
 ---
 

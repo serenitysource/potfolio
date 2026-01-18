@@ -61,14 +61,14 @@
 ---
 
 ## Summary Table
-| Function                | Access      | Purpose                                      |
-|-------------------------|-------------|----------------------------------------------|
-| transferOwnership       | onlyOwner   | Transfer contract ownership                  |
-| setToken                | onlyOwner   | Register token contract for symbol           |
-| bridgeMint              | public      | Lock tokens and initiate bridge              |
-| handleBridgeResult      | gateway     | Burn or unlock tokens after bridge           |
-| unlockTokens            | public      | User unlocks tokens if bridge fails          |
-| emitBridgeEvent         | public      | Emit bridge event (testing/logging)          |
+| Function                | Access      | Purpose                                     |
+|-------------------------|-------------|---------------------------------------------|
+| transferOwnership       | onlyOwner   | Transfer contract ownership                 |
+| setToken                | onlyOwner   | Register token contract for ymbol           |
+| bridgeMint              | public      | Lock tokens and initiate ridge              |
+| handleBridgeResult      | gateway     | Burn or unlock tokens after ridge           |
+| unlockTokens            | public      | User unlocks tokens if bridge fails         |
+| emitBridgeEvent         | public      | Emit bridge event (testing/logging)         |
 
 ---
 

@@ -4,8 +4,8 @@
 The Carbon Credit Marketplace is designed to facilitate the buying and selling of carbon credits. It aims to create a transparent and decentralized environment for carbon offset projects.
 
 ## Features
-| Feature                | Description                                                       |
-|------------------------|-------------------------------------------------------------------|
+| Feature                 | Description                                                       |
+|-------------------------|-------------------------------------------------------------------|
 | Decentralization        | Utilizes blockchain technology to ensure transparency.
 | Real-time Tracking      | Provides real-time data on carbon credits.
 | User-friendly Interface | Intuitive UI for users to navigate and perform transactions.
