@@ -33,6 +33,7 @@ Hepek Web3 MQTT Master is a unified platform for real-time energy monitoring, bl
 - <span style="color:#e67e22">**Secrets Management**</span>: Encrypted device secrets and credentials.
 
 <img src="_docs/architecture.png" width="600"/>
+<img src="https://raw.githubusercontent.com/serenitysource/potfolio/main/Hepek/images/architecture.png" width="600"/>
 </details>
 
 ---
